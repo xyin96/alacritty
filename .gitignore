@@ -1,2 +1,8 @@
 target
 FlameGraph
+
+# vim temporary files
+*.swp
+
+# other ignores
+*.DS_Store
