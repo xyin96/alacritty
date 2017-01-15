@@ -30,6 +30,8 @@ pub struct FreeTypeRasterizer {
     keys: HashMap<FontDesc, FontKey>,
     dpi_x: u32,
     dpi_y: u32,
+    glyph_offset_x: i32,
+    glyph_offset_y: i32,
     dpr: f32,
 }
 
@@ -41,7 +43,7 @@ fn to_freetype_26_6(f: f32) -> isize {
 impl ::Rasterize for FreeTypeRasterizer {
     type Err = Error;
 
-    fn new(dpi_x: f32, dpi_y: f32, device_pixel_ratio: f32, _: bool) -> Result<FreeTypeRasterizer, Error> {
+    fn new(dpi_x: f32, dpi_y: f32, glyph_offset_x: f32, glyph_offset_y: f32, device_pixel_ratio: f32, _: bool) -> Result<FreeTypeRasterizer, Error> {
         let library = Library::init()?;
 
         Ok(FreeTypeRasterizer {
@@ -50,6 +52,8 @@ impl ::Rasterize for FreeTypeRasterizer {
             library: library,
             dpi_x: dpi_x as u32,
             dpi_y: dpi_y as u32,
+            glyph_offset_x: glyph_offset_x as i32,
+            glyph_offset_y: glyph_offset_y as i32,
             dpr: device_pixel_ratio,
         })
     }
@@ -120,8 +124,8 @@ impl ::Rasterize for FreeTypeRasterizer {
 
         Ok(RasterizedGlyph {
             c: c,
-            top: glyph.bitmap_top(),
-            left: glyph.bitmap_left(),
+            top: glyph.bitmap_top() + self.glyph_offset_y,
+            left: glyph.bitmap_left() + self.glyph_offset_x,
             width: glyph.bitmap().width() / 3,
             height: glyph.bitmap().rows(),
             buf: packed,

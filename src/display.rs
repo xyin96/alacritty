@@ -135,6 +135,7 @@ impl Display {
     ) -> Result<Display, Error> {
         // Extract some properties from config
         let font = config.font();
+        let glyph_offset = font.glyph_offset();
         let dpi = config.dpi();
         let render_timer = config.render_timer();
 
@@ -148,7 +149,7 @@ impl Display {
 
         info!("device_pixel_ratio: {}", dpr);
 
-        let rasterizer = font::Rasterizer::new(dpi.x(), dpi.y(), dpr, config.use_thin_strokes())?;
+        let rasterizer = font::Rasterizer::new(dpi.x(), dpi.y(), glyph_offset.x(), glyph_offset.y(), dpr, config.use_thin_strokes())?;
 
         // Create renderer
         let mut renderer = QuadRenderer::new(config, size)?;
