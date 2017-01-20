@@ -226,7 +226,7 @@ pub trait Rasterize {
     type Err: ::std::error::Error + Send + Sync + 'static;
 
     /// Create a new Rasterize
-    fn new(dpi_x: f32, dpi_y: f32, glyph_offset_x: f32, glyph_offset_y: f32, device_pixel_ratio: f32, use_thin_strokes: bool) -> Result<Self, Self::Err>
+    fn new(dpi_x: f32, dpi_y: f32, device_pixel_ratio: f32, use_thin_strokes: bool) -> Result<Self, Self::Err>
         where Self: Sized;
 
     /// Get `Metrics` for the given `FontKey` and `Size`
@@ -236,5 +236,5 @@ pub trait Rasterize {
     fn load_font(&mut self, &FontDesc, Size) -> Result<FontKey, Self::Err>;
 
     /// Rasterize the glyph described by `GlyphKey`.
-    fn get_glyph(&mut self, &GlyphKey) -> Result<RasterizedGlyph, Self::Err>;
+    fn get_glyph(&mut self, &GlyphKey, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Self::Err>;
 }

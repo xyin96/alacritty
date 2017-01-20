@@ -155,6 +155,10 @@ pub struct GlyphCache {
 
     /// font size
     font_size: font::Size,
+
+    /// glyph offset
+    glyph_offset_x: i32,
+    glyph_offset_y: i32,
 }
 
 impl GlyphCache {
@@ -221,6 +225,8 @@ impl GlyphCache {
             cache: HashMap::default(),
             rasterizer: rasterizer,
             font_size: font.size(),
+            glyph_offset_x: font.glyph_offset().x as i32,
+            glyph_offset_y: font.glyph_offset().y as i32,
             font_key: regular,
             bold_key: bold,
             italic_key: italic,

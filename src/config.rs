@@ -1276,22 +1276,14 @@ impl FontOffset {
 #[derive(Debug, Deserialize)]
 pub struct GlyphOffset {
     /// Horizontal position
-    x: f32,
+    pub x: f32,
     /// Vertical position
-    y: f32,
+    pub y: f32,
 }
 
-impl GlyphOffset {
-    /// Horizontal position
-    #[inline]
-    pub fn x(&self) -> f32 {
-        self.x
-    }
-
-    /// Vertical position
-    #[inline]
-    pub fn y(&self) -> f32 {
-        self.y
+impl Default for GlyphOffset {
+    fn default() -> GlyphOffset {
+        GlyphOffset { x: 0.0, y: 0.0 }
     }
 }
 
@@ -1357,6 +1349,7 @@ pub struct Font {
     offset: FontOffset,
 
     /// Glyph offset within character cell
+    #[serde(default)]
     glyph_offset: GlyphOffset,
 
     #[serde(default="true_bool")]
@@ -1420,10 +1413,7 @@ impl Default for Font {
                 x: 0.0,
                 y: 0.0
             },
-            glyph_offset: GlyphOffset {
-                x: 0.0,
-                y: 0.0
-            }
+            glyph_offset: Default::default()
         }
     }
 }
@@ -1443,10 +1433,7 @@ impl Default for Font {
                 x: 2.0,
                 y: -7.0
             },
-            glyph_offset: GlyphOffset {
-                x: 0.0,
-                y: 0.0
-            }
+            glyph_offset: Default::default()
         }
     }
 }
