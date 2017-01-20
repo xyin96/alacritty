@@ -161,13 +161,13 @@ impl ::Rasterize for Rasterizer {
     }
 
     /// Get rasterized glyph for given glyph key
-    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: i32, gylph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
+    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
         let scaled_size = self.device_pixel_ratio * glyph.size.as_f32_pts();
 
         self.fonts
             .get(&glyph.font_key)
             .ok_or(Error::FontNotLoaded)?
-            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes)
+            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes, glyph_offset_x, glyph_offset_y)
     }
 }
 
@@ -360,7 +360,7 @@ impl Font {
         )
     }
 
-    pub fn get_glyph(&self, character: char, _size: f64, use_thin_strokes: bool) -> Result<RasterizedGlyph, Error> {
+    pub fn get_glyph(&self, character: char, _size: f64, use_thin_strokes: bool, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
         let glyph_index = self.glyph_index(character)
             .ok_or(Error::MissingGlyph(character))?;
 
@@ -435,8 +435,8 @@ impl Font {
 
         Ok(RasterizedGlyph {
             c: character,
-            left: rasterized_left,
-            top: (bounds.size.height + bounds.origin.y).ceil() as i32,
+            left: rasterized_left + glyph_offset_x,
+            top: (bounds.size.height + bounds.origin.y).ceil() as i32 + glyph_offset_y,
             width: rasterized_width as i32,
             height: rasterized_height as i32,
             buf: buf,
