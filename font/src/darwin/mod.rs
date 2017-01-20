@@ -161,7 +161,7 @@ impl ::Rasterize for Rasterizer {
     }
 
     /// Get rasterized glyph for given glyph key
-    fn get_glyph(&mut self, glyph: &GlyphKey) -> Result<RasterizedGlyph, Error> {
+    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: i32, gylph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
         let scaled_size = self.device_pixel_ratio * glyph.size.as_f32_pts();
 
         self.fonts
