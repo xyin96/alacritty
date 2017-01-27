@@ -4,11 +4,16 @@ version = "0.1.0"
 authors = ["Joe Wilm <joe@jwilm.com>"]
 license = "Apache-2.0"
 build = "build.rs"
+description = "GPU-accelerated terminal emulator"
 
 [[bin]]
 doc = false
 path = "src/main.rs"
 name = "alacritty"
+
+[[test]]
+name = "ref"
+harness = false
 
 [dependencies]
 libc = "*"
@@ -27,6 +32,9 @@ mio = "0.6"
 serde_json = "*"
 copypasta = { path = "./copypasta" }
 xdg = "2.0.0"
+log = "0.3"
+clap = "2.20"
+fnv = "1.0.5"
 
 clippy = { version = "0.0.104", optional = true }
 
@@ -44,6 +52,8 @@ gl_generator = "0.5"
 git = "https://github.com/jwilm/glutin"
 rev = "af7fe340bd4a2af53ea521defcb4f377cdc588cf"
 
+[dev-dependencies]
+rustc-test = { version = "0.1", features = ["capture"] }
 
 [profile.release]
 lto = true

@@ -19,6 +19,9 @@
 #[macro_use]
 extern crate alacritty;
 
+#[macro_use]
+extern crate log;
+
 use std::error::Error;
 use std::sync::Arc;
 
@@ -27,12 +30,14 @@ use alacritty::config::{self, Config};
 use alacritty::display::Display;
 use alacritty::event;
 use alacritty::event_loop::{self, EventLoop};
+use alacritty::logging;
 use alacritty::sync::FairMutex;
 use alacritty::term::{Term};
 use alacritty::tty::{self, process_should_exit};
 use alacritty::util::fmt::Red;
 
 fn main() {
+
     // Load configuration
     let config = Config::load().unwrap_or_else(|err| {
         match err {
@@ -60,7 +65,7 @@ fn main() {
         die!("Alacritty encountered an unrecoverable error:\n\n\t{}\n", Red(err));
     }
 
-    println!("Goodbye");
+    info!("Goodbye.");
 }
 
 
@@ -69,12 +74,17 @@ fn main() {
 /// Creates a window, the terminal state, pty, I/O event loop, input processor,
 /// config change monitor, and runs the main display loop.
 fn run(mut config: Config, options: cli::Options) -> Result<(), Box<Error>> {
+    // Initialize the logger first as to capture output from other subsystems
+    logging::initialize(&options)?;
+
+    info!("Welcome to Alacritty.");
+
     // Create a display.
     //
     // The display manages a window and can draw the terminal
     let mut display = Display::new(&config, &options)?;
 
-    println!(
+    info!(
         "PTY Dimensions: {:?} x {:?}",
         display.size().lines(),
         display.size().cols()
@@ -93,7 +103,7 @@ fn run(mut config: Config, options: cli::Options) -> Result<(), Box<Error>> {
     // The pty forks a process to run the shell on the slave side of the
     // pseudoterminal. A file descriptor for the master side is retained for
     // reading/writing to the shell.
-    let mut pty = tty::new(&config, &options, display.size());
+    let mut pty = tty::new(&config, display.size());
 
     // Create the pseudoterminal I/O loop
     //

@@ -6,3 +6,6 @@ FlameGraph
 
 # other ignores
 *.DS_Store
+
+.idea
+*.iml
