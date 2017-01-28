@@ -41,6 +41,7 @@ extern crate parking_lot;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
+extern crate time;
 extern crate vte;
 extern crate xdg;
 

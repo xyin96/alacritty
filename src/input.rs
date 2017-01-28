@@ -31,6 +31,7 @@ use selection::Selection;
 use term::mode::{self, TermMode};
 use term::{self, Term};
 use util::fmt::Red;
+use time;
 
 /// Processes input from glutin.
 ///
@@ -252,6 +253,9 @@ impl<'a, N: Notify + 'a> Processor<'a, N> {
         }
     }
 
+    pub fn on_mouse_dbl_click(&mut self) {
+    }
+
     pub fn on_mouse_press(&mut self) {
         if self.ctx.terminal.mode().intersects(mode::MOUSE_REPORT_CLICK | mode::MOUSE_MOTION) {
             self.mouse_report(0);
@@ -326,7 +330,14 @@ impl<'a, N: Notify + 'a> Processor<'a, N> {
             if self.ctx.mouse.left_button_state != state {
                 match self.ctx.mouse.left_button_state {
                     ElementState::Pressed => {
-                        self.on_mouse_press();
+                        let diff = time::get_time() - self.ctx.mouse.last_click_timestamp;
+                        if diff.num_milliseconds() < 300 {
+                            warn!("double click!");
+                            self.on_mouse_dbl_click();
+                        } else {
+                            self.ctx.mouse.last_click_timestamp = time::get_time();
+                            self.on_mouse_press();
+                        }
                     },
                     ElementState::Released => {
                         self.on_mouse_release();
