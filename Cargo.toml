@@ -16,6 +16,7 @@ name = "ref"
 harness = false
 
 [dependencies]
+time = "0.1"
 libc = "*"
 cgmath = "0.7"
 notify = "2.6"

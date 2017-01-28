@@ -18,6 +18,7 @@ use sync::FairMutex;
 use term::{Term, SizeInfo};
 use util::limit;
 use window::Window;
+use time::{self, Timespec};
 
 /// Byte sequences are sent to a `Notify` in response to some events
 pub trait Notify {
@@ -32,6 +33,7 @@ pub struct Mouse {
     pub x: u32,
     pub y: u32,
     pub left_button_state: ElementState,
+    pub last_click_timestamp: Timespec,
     pub scroll_px: i32,
     pub line: Line,
     pub column: Column,
@@ -43,6 +45,7 @@ impl Default for Mouse {
         Mouse {
             x: 0,
             y: 0,
+            last_click_timestamp: time::get_time(),
             left_button_state: ElementState::Released,
             scroll_px: 0,
             line: Line(0),
