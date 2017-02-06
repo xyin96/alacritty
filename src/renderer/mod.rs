@@ -855,8 +855,8 @@ impl<'a> LoadGlyph for LoaderApi<'a> {
     fn load_glyph(&mut self, glyph_key: GlyphKey) -> Glyph {
         let rasterized = self.rasterizer.get_glyph(
             &glyph_key,
-            self.font.glyph_offset.x as i32,
-            self.font.glyph_offset.y as i32
+            self.font.glyph_offset.x,
+            self.font.glyph_offset.y
         ).unwrap_or_else(|_| Default::default());
         // At least one atlas is guaranteed to be in the `self.atlas` list; thus
         // the unwrap should always be ok.
@@ -883,8 +883,8 @@ impl<'a> LoadGlyph for RenderApi<'a> {
     fn load_glyph(&mut self, glyph_key: GlyphKey) -> Glyph {
         let rasterized = self.rasterizer.get_glyph(
             &glyph_key,
-            self.font.glyph_offset.x as i32,
-            self.font.glyph_offset.y as i32
+            self.font.glyph_offset.x,
+            self.font.glyph_offset.y
         ).unwrap_or_else(|_| Default::default());
         // At least one atlas is guaranteed to be in the `self.atlas` list; thus
         // the unwrap.

@@ -86,7 +86,7 @@ impl ::Rasterize for FreeTypeRasterizer {
             })
     }
 
-    fn get_glyph(&mut self, glyph_key: &GlyphKey, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
+    fn get_glyph(&mut self, glyph_key: &GlyphKey, glyph_offset_x: f32, glyph_offset_y: f32) -> Result<RasterizedGlyph, Error> {
         let face = self.faces
             .get(&glyph_key.font_key)
             .ok_or(Error::FontNotLoaded)?;
@@ -110,6 +110,8 @@ impl ::Rasterize for FreeTypeRasterizer {
         let bitmap = glyph.bitmap();
         let buf = bitmap.buffer();
         let pitch = bitmap.pitch() as usize;
+        let scaled_glyph_offset_x = (glyph_offset_x * self.device_pixel_ratio) as i32;
+        let scaled_glyph_offset_y = (glyph_offset_y * self.device_pixel_ratio) as i32;
 
         let mut packed = Vec::with_capacity((bitmap.rows() * bitmap.width()) as usize);
         for i in 0..bitmap.rows() {
@@ -120,8 +122,8 @@ impl ::Rasterize for FreeTypeRasterizer {
 
         Ok(RasterizedGlyph {
             c: c,
-            top: glyph.bitmap_top() + glyph_offset_y,
-            left: glyph.bitmap_left() + glyph_offset_x,
+            top: glyph.bitmap_top() + scaled_glyph_offset_y,
+            left: glyph.bitmap_left() + scaled_glyph_offset_x,
             width: glyph.bitmap().width() / 3,
             height: glyph.bitmap().rows(),
             buf: packed,

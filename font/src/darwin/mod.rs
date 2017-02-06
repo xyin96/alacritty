@@ -163,13 +163,15 @@ impl ::Rasterize for Rasterizer {
     }
 
     /// Get rasterized glyph for given glyph key
-    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
+    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: f32, glyph_offset_y: f32) -> Result<RasterizedGlyph, Error> {
         let scaled_size = self.device_pixel_ratio * glyph.size.as_f32_pts();
+        let scaled_glyph_offset_x = (glyph_offset_x * self.device_pixel_ratio) as i32;
+        let scaled_glyph_offset_y = (glyph_offset_y * self.device_pixel_ratio) as i32;
 
         self.fonts
             .get(&glyph.font_key)
             .ok_or(Error::FontNotLoaded)?
-            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes, glyph_offset_x, glyph_offset_y)
+            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes, scaled_glyph_offset_x, scaled_glyph_offset_y)
     }
 }
 

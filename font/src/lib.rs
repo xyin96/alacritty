@@ -236,5 +236,5 @@ pub trait Rasterize {
     fn load_font(&mut self, &FontDesc, Size) -> Result<FontKey, Self::Err>;
 
     /// Rasterize the glyph described by `GlyphKey`.
-    fn get_glyph(&mut self, &GlyphKey, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Self::Err>;
+    fn get_glyph(&mut self, &GlyphKey, glyph_offset_x: f32, glyph_offset_y: f32) -> Result<RasterizedGlyph, Self::Err>;
 }
