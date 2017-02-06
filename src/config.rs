@@ -1103,8 +1103,8 @@ impl Config {
 
     /// Get font config
     #[inline]
-    pub fn font(&self) -> &Font {
-        &self.font
+    pub fn font(&self) -> Font {
+        self.font.clone()
     }
 
     /// Get window dimensions
@@ -1212,7 +1212,7 @@ impl Dimensions {
 /// Pixels per inch
 ///
 /// This is only used on `FreeType` systems
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Dpi {
     /// Horizontal dpi
     x: f32,
@@ -1245,7 +1245,7 @@ impl Dpi {
 ///
 /// The way Alacritty calculates vertical and horizontal cell sizes may not be
 /// ideal for all fonts. This gives the user a way to tweak those values.
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct FontOffset {
     /// Extra horizontal spacing between letters
     x: f32,
@@ -1273,7 +1273,7 @@ impl FontOffset {
 /// By default the glyphs are located at the bottom of the cell which can be
 /// undesirable. This gives the user a way to shift where the glyphs are
 /// displayed in their cells.
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct GlyphOffset {
     /// Horizontal position
     pub x: f32,
@@ -1330,7 +1330,7 @@ impl DeserializeFromF32 for Size {
 /// field in this struct. It might be nice in the future to have defaults for
 /// each value independently. Alternatively, maybe erroring when the user
 /// doesn't provide complete config is Ok.
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Font {
     /// Font family
     pub normal: FontDescription,
@@ -1343,14 +1343,14 @@ pub struct Font {
 
     // Font size in points
     #[serde(deserialize_with="DeserializeFromF32::deserialize_from_f32")]
-    size: Size,
+    pub size: Size,
 
     /// Extra spacing per character
-    offset: FontOffset,
+    pub offset: FontOffset,
 
     /// Glyph offset within character cell
     #[serde(default)]
-    glyph_offset: GlyphOffset,
+    pub glyph_offset: GlyphOffset,
 
     #[serde(default="true_bool")]
     use_thin_strokes: bool
@@ -1365,7 +1365,7 @@ fn default_italic_desc() -> FontDescription {
 }
 
 /// Description of a single font
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct FontDescription {
     pub family: String,
     pub style: Option<String>,

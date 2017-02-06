@@ -151,7 +151,7 @@ impl Display {
         let rasterizer = font::Rasterizer::new(dpi.x(), dpi.y(), dpr, config.use_thin_strokes())?;
 
         // Create renderer
-        let mut renderer = QuadRenderer::new(config, size)?;
+        let mut renderer = QuadRenderer::new(config, size, rasterizer)?;
 
         // Initialize glyph cache
         let glyph_cache = {
@@ -159,7 +159,7 @@ impl Display {
             let init_start = ::std::time::Instant::now();
 
             let cache = renderer.with_loader(|mut api| {
-                GlyphCache::new(rasterizer, config, &mut api)
+                GlyphCache::new(config, &mut api)
             })?;
 
             let stop = init_start.elapsed();
@@ -172,7 +172,7 @@ impl Display {
         // Need font metrics to resize the window properly. This suggests to me the
         // font metrics should be computed before creating the window in the first
         // place so that a resize is not needed.
-        let metrics = glyph_cache.font_metrics();
+        let metrics = renderer.get_metrics(&glyph_cache);
         let cell_width = (metrics.average_advance + font.offset().x() as f64) as u32;
         let cell_height = (metrics.line_height + font.offset().y() as f64) as u32;
 

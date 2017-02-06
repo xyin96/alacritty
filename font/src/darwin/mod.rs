@@ -18,6 +18,7 @@
 #![allow(improper_ctypes)]
 use std::collections::HashMap;
 use std::ptr;
+use std::fmt::{self, Debug};
 
 use ::{Slant, Weight, Style};
 
@@ -74,6 +75,7 @@ pub struct Descriptor {
 /// Rasterizer, the main type exported by this package
 ///
 /// Given a fontdesc, can rasterize fonts.
+#[derive(Debug)]
 pub struct Rasterizer {
     fonts: HashMap<FontKey, Font>,
     keys: HashMap<(FontDesc, Size), FontKey>,
@@ -249,6 +251,13 @@ impl Default for FontOrientation {
 pub struct Font {
     ct_font: CTFont,
     cg_font: CGFont,
+}
+
+impl Debug for Font {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "")
+    }
+
 }
 
 unsafe impl Send for Font {}
