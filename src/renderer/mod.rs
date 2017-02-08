@@ -29,7 +29,7 @@ use index::{Line, Column, RangeInclusive};
 use notify::{Watcher as WatcherApi, RecommendedWatcher as Watcher, op};
 
 use ansi::{Color, NamedColor};
-use config::{Config, ColorList};
+use config::{Config, ColorList, Font};
 use term::{self, cell, IndexedCell, Cell};
 use window::{Size, Pixels};
 
@@ -50,7 +50,9 @@ static TEXT_SHADER_V: &'static str = include_str!(
 /// `LoadGlyph` allows for copying a rasterized glyph into graphics memory
 pub trait LoadGlyph {
     /// Load the rasterized glyph into GPU memory
-    fn load_glyph(&mut self, rasterized: &RasterizedGlyph) -> Glyph;
+    fn load_glyph(&mut self, rasterized: GlyphKey) -> Glyph;
+
+    fn load_font(&mut self, desc: &FontDesc, size: font::Size) -> Result<font::FontKey, font::Error>;
 }
 
 enum Msg {
@@ -141,25 +143,21 @@ pub struct GlyphCache {
     /// Cache of buffered glyphs
     cache: HashMap<GlyphKey, Glyph, BuildHasherDefault<FnvHasher>>,
 
-    /// Rasterizer for loading new glyphs
-    rasterizer: Rasterizer,
-
     /// regular font
-    font_key: FontKey,
+    pub font_key: FontKey,
 
     /// italic font
-    italic_key: FontKey,
+    pub italic_key: FontKey,
 
     /// bold font
-    bold_key: FontKey,
+    pub bold_key: FontKey,
 
     /// font size
-    font_size: font::Size,
+    pub font_size: font::Size,
 }
 
 impl GlyphCache {
     pub fn new<L>(
-        mut rasterizer: Rasterizer,
         config: &Config,
         loader: &mut L
     ) -> Result<GlyphCache, font::Error>
@@ -179,7 +177,7 @@ impl GlyphCache {
             FontDesc::new(&font.normal.family[..], style)
         };
 
-        let regular = rasterizer
+        let regular = loader
             .load_font(&regular_desc, size)?;
 
         // Load bold font
@@ -196,7 +194,7 @@ impl GlyphCache {
         let bold = if bold_desc == regular_desc {
             regular
         } else {
-            rasterizer.load_font(&bold_desc, size).unwrap_or_else(|_| regular)
+            loader.load_font(&bold_desc, size).unwrap_or_else(|_| regular)
         };
 
         // Load italic font
@@ -213,13 +211,12 @@ impl GlyphCache {
         let italic = if italic_desc == regular_desc {
             regular
         } else {
-            rasterizer.load_font(&italic_desc, size)
+            loader.load_font(&italic_desc, size)
                       .unwrap_or_else(|_| regular)
         };
 
         let mut cache = GlyphCache {
             cache: HashMap::default(),
-            rasterizer: rasterizer,
             font_size: font.size(),
             font_key: regular,
             bold_key: bold,
@@ -245,33 +242,19 @@ impl GlyphCache {
         Ok(cache)
     }
 
-    pub fn font_metrics(&self) -> font::Metrics {
-        self.rasterizer
-            .metrics(self.font_key, self.font_size)
-            .expect("metrics load since font is loaded at glyph cache creation")
-    }
-
     fn load_and_cache_glyph<L>(&mut self, glyph_key: GlyphKey, loader: &mut L)
         where L: LoadGlyph
     {
-        let rasterized = self.rasterizer.get_glyph(&glyph_key)
-            .unwrap_or_else(|_| Default::default());
-
-        let glyph = loader.load_glyph(&rasterized);
+        let glyph = loader.load_glyph(glyph_key);
         self.cache.insert(glyph_key, glyph);
     }
 
     pub fn get<'a, L>(&'a mut self, glyph_key: &GlyphKey, loader: &mut L) -> &'a Glyph
         where L: LoadGlyph
     {
-        let rasterizer = &mut self.rasterizer;
         self.cache
             .entry(*glyph_key)
-            .or_insert_with(|| {
-                let rasterized = rasterizer.get_glyph(&glyph_key)
-                    .unwrap_or_else(|_| Default::default());
-                loader.load_glyph(&rasterized)
-            })
+            .or_insert_with(|| loader.load_glyph(*glyph_key))
     }
 }
 
@@ -311,6 +294,8 @@ pub struct QuadRenderer {
     ebo: GLuint,
     vbo_instance: GLuint,
     atlas: Vec<Atlas>,
+    font: Font,
+    rasterizer: Rasterizer,
     active_tex: GLuint,
     batch: Batch,
     draw_bold_text_with_bright_colors: bool,
@@ -323,14 +308,18 @@ pub struct RenderApi<'a> {
     batch: &'a mut Batch,
     atlas: &'a mut Vec<Atlas>,
     program: &'a mut ShaderProgram,
+    rasterizer: &'a mut Rasterizer,
     colors: &'a ColorList,
     visual_bell: f32,
+    font: &'a Font,
 }
 
 #[derive(Debug)]
 pub struct LoaderApi<'a> {
     active_tex: &'a mut GLuint,
     atlas: &'a mut Vec<Atlas>,
+    font: &'a Font,
+    rasterizer: &'a mut Rasterizer,
 }
 
 #[derive(Debug)]
@@ -456,7 +445,7 @@ const ATLAS_SIZE: i32 = 1024;
 
 impl QuadRenderer {
     // TODO should probably hand this a transform instead of width/height
-    pub fn new(config: &Config, size: Size<Pixels<u32>>) -> Result<QuadRenderer, Error> {
+    pub fn new(config: &Config, size: Size<Pixels<u32>>, rasterizer: Rasterizer) -> Result<QuadRenderer, Error> {
         let program = ShaderProgram::new(size)?;
 
         let mut vao: GLuint = 0;
@@ -599,7 +588,9 @@ impl QuadRenderer {
             ebo: ebo,
             vbo_instance: vbo_instance,
             atlas: Vec::new(),
+            rasterizer: rasterizer,
             active_tex: 0,
+            font: config.font(),
             batch: Batch::new(config),
             rx: msg_rx,
             draw_bold_text_with_bright_colors: config.draw_bold_text_with_bright_colors(),
@@ -609,6 +600,12 @@ impl QuadRenderer {
         renderer.atlas.push(atlas);
 
         Ok(renderer)
+    }
+
+    pub fn get_metrics(&mut self, glyph_cache: &GlyphCache) -> font::Metrics {
+        self.rasterizer
+            .metrics(glyph_cache.font_key, glyph_cache.font_size)
+            .expect("metrics load since font is loaded at glyph cache creation")
     }
 
     pub fn update_config(&mut self, config: &Config) {
@@ -649,8 +646,10 @@ impl QuadRenderer {
             batch: &mut self.batch,
             atlas: &mut self.atlas,
             program: &mut self.program,
+            rasterizer: &mut self.rasterizer,
             colors: config.color_list(),
             visual_bell: 0.0,
+            font: &self.font,
         });
 
         unsafe {
@@ -674,6 +673,8 @@ impl QuadRenderer {
         func(LoaderApi {
             active_tex: &mut self.active_tex,
             atlas: &mut self.atlas,
+            font: &self.font,
+            rasterizer: &mut self.rasterizer,
         })
     }
 
@@ -851,18 +852,27 @@ impl<'a> LoadGlyph for LoaderApi<'a> {
     /// Load a glyph into a texture atlas
     ///
     /// If the current atlas is full, a new one will be created.
-    fn load_glyph(&mut self, rasterized: &RasterizedGlyph) -> Glyph {
+    fn load_glyph(&mut self, glyph_key: GlyphKey) -> Glyph {
+        let rasterized = self.rasterizer.get_glyph(
+            &glyph_key,
+            self.font.glyph_offset.x,
+            self.font.glyph_offset.y
+        ).unwrap_or_else(|_| Default::default());
         // At least one atlas is guaranteed to be in the `self.atlas` list; thus
         // the unwrap should always be ok.
-        match self.atlas.last_mut().unwrap().insert(rasterized, &mut self.active_tex) {
+        match self.atlas.last_mut().unwrap().insert(&rasterized, &mut self.active_tex) {
             Ok(glyph) => glyph,
             Err(_) => {
                 let atlas = Atlas::new(ATLAS_SIZE);
                 *self.active_tex = 0; // Atlas::new binds a texture. Ugh this is sloppy.
                 self.atlas.push(atlas);
-                self.load_glyph(rasterized)
+                self.load_glyph(glyph_key)
             }
         }
+    }
+
+    fn load_font(&mut self, desc: &FontDesc, size: font::Size) -> Result<font::FontKey, font::Error> {
+        self.rasterizer.load_font(desc, size)
     }
 }
 
@@ -870,18 +880,27 @@ impl<'a> LoadGlyph for RenderApi<'a> {
     /// Load a glyph into a texture atlas
     ///
     /// If the current atlas is full, a new one will be created.
-    fn load_glyph(&mut self, rasterized: &RasterizedGlyph) -> Glyph {
+    fn load_glyph(&mut self, glyph_key: GlyphKey) -> Glyph {
+        let rasterized = self.rasterizer.get_glyph(
+            &glyph_key,
+            self.font.glyph_offset.x,
+            self.font.glyph_offset.y
+        ).unwrap_or_else(|_| Default::default());
         // At least one atlas is guaranteed to be in the `self.atlas` list; thus
         // the unwrap.
-        match self.atlas.last_mut().unwrap().insert(rasterized, &mut self.active_tex) {
+        match self.atlas.last_mut().unwrap().insert(&rasterized, &mut self.active_tex) {
             Ok(glyph) => glyph,
             Err(_) => {
                 let atlas = Atlas::new(ATLAS_SIZE);
                 *self.active_tex = 0; // Atlas::new binds a texture. Ugh this is sloppy.
                 self.atlas.push(atlas);
-                self.load_glyph(rasterized)
+                self.load_glyph(glyph_key)
             }
         }
+    }
+
+    fn load_font(&mut self, desc: &FontDesc, size: font::Size) -> Result<font::FontKey, font::Error> {
+        self.rasterizer.load_font(desc, size)
     }
 }
 

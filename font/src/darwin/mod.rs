@@ -18,6 +18,7 @@
 #![allow(improper_ctypes)]
 use std::collections::HashMap;
 use std::ptr;
+use std::fmt::{self, Debug};
 
 use ::{Slant, Weight, Style};
 
@@ -74,6 +75,7 @@ pub struct Descriptor {
 /// Rasterizer, the main type exported by this package
 ///
 /// Given a fontdesc, can rasterize fonts.
+#[derive(Debug)]
 pub struct Rasterizer {
     fonts: HashMap<FontKey, Font>,
     keys: HashMap<(FontDesc, Size), FontKey>,
@@ -125,7 +127,7 @@ impl ::Rasterize for Rasterizer {
     type Err = Error;
 
     fn new(_dpi_x: f32, _dpi_y: f32, device_pixel_ratio: f32, use_thin_strokes: bool) -> Result<Rasterizer, Error> {
-        info!("device_pixel_ratio: {}", device_pixel_ratio);
+        println!("device_pixel_ratio: {}", device_pixel_ratio);
         Ok(Rasterizer {
             fonts: HashMap::new(),
             keys: HashMap::new(),
@@ -161,13 +163,15 @@ impl ::Rasterize for Rasterizer {
     }
 
     /// Get rasterized glyph for given glyph key
-    fn get_glyph(&mut self, glyph: &GlyphKey) -> Result<RasterizedGlyph, Error> {
+    fn get_glyph(&mut self, glyph: &GlyphKey, glyph_offset_x: f32, glyph_offset_y: f32) -> Result<RasterizedGlyph, Error> {
         let scaled_size = self.device_pixel_ratio * glyph.size.as_f32_pts();
+        let scaled_glyph_offset_x = (glyph_offset_x * self.device_pixel_ratio) as i32;
+        let scaled_glyph_offset_y = (glyph_offset_y * self.device_pixel_ratio) as i32;
 
         self.fonts
             .get(&glyph.font_key)
             .ok_or(Error::FontNotLoaded)?
-            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes)
+            .get_glyph(glyph.c, scaled_size as _, self.use_thin_strokes, scaled_glyph_offset_x, scaled_glyph_offset_y)
     }
 }
 
@@ -249,6 +253,13 @@ impl Default for FontOrientation {
 pub struct Font {
     ct_font: CTFont,
     cg_font: CGFont,
+}
+
+impl Debug for Font {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "")
+    }
+
 }
 
 unsafe impl Send for Font {}
@@ -360,7 +371,7 @@ impl Font {
         )
     }
 
-    pub fn get_glyph(&self, character: char, _size: f64, use_thin_strokes: bool) -> Result<RasterizedGlyph, Error> {
+    pub fn get_glyph(&self, character: char, _size: f64, use_thin_strokes: bool, glyph_offset_x: i32, glyph_offset_y: i32) -> Result<RasterizedGlyph, Error> {
         let glyph_index = self.glyph_index(character)
             .ok_or(Error::MissingGlyph(character))?;
 
@@ -435,8 +446,8 @@ impl Font {
 
         Ok(RasterizedGlyph {
             c: character,
-            left: rasterized_left,
-            top: (bounds.size.height + bounds.origin.y).ceil() as i32,
+            left: rasterized_left + glyph_offset_x,
+            top: (bounds.size.height + bounds.origin.y).ceil() as i32 + glyph_offset_y,
             width: rasterized_width as i32,
             height: rasterized_height as i32,
             buf: buf,
